@@ -1,6 +1,10 @@
 (() => {
   'use strict';
 
+  // Bump this on every shipped change — it's the only way to confirm
+  // on-device (especially iOS, with no devtools) which build is loaded.
+  const APP_VERSION = '2026.07.23-1';
+
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
     animals: ['🐵','🐶','🐱','🦁','🐮','🐷','🐸','🐨','🐼','🦊','🐰','🐻','🐯','🐹','🐭','🐔','🐧','🐦','🦆','🦉','🦇','🐗','🐴','🐝'],
@@ -192,6 +196,8 @@
   wireSegmented(gridSizeGroup, 'size');
   wireSegmented(deckThemeGroup, 'theme');
 
+  document.getElementById('version-tag').textContent = APP_VERSION;
+
   // ---- orientation lock ----
   // Android gets its lock for free from the manifest's "orientation"
   // field, but only for an app installed to the home screen — that's
@@ -299,6 +305,24 @@
     await deferredPrompt.userChoice;
     deferredPrompt = null;
     installBtn.hidden = true;
+  });
+
+  // ---- force update ----
+  // Unregisters the service worker and clears its caches so the next
+  // load re-fetches everything fresh, then reloads.
+  document.getElementById('btn-update').addEventListener('click', async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } finally {
+      location.reload();
+    }
   });
 
   // ---- service worker ----

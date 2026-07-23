@@ -323,6 +323,14 @@ button{font-family:inherit;}
 }
 .btn-ghost:hover{color:var(--paper); border-color:rgba(255,255,255,.25);}
 
+.version-tag{
+  margin:14px 0 0;
+  text-align:center;
+  font-size:.66rem;
+  color:rgba(255,255,255,.28);
+  letter-spacing:.03em;
+}
+
 .win-card .win-mark{color:var(--gold);}
 
 @media (prefers-reduced-motion: reduce){
