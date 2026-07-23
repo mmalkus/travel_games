@@ -192,59 +192,18 @@
   wireSegmented(gridSizeGroup, 'size');
   wireSegmented(deckThemeGroup, 'theme');
 
-  // ---- orientation lock ----
-  // Chrome only allows screen.orientation.lock() while the page is
-  // fullscreen (or running as an installed app), and Safari doesn't
-  // implement the lock at all — so on top of that best-effort JS call,
-  // stageEl gets a CSS class recording whichever orientation the device
-  // is already in when the game starts. A media query in style.css
-  // rotates the stage back whenever the device's actual orientation
-  // later disagrees with that class, so the page stays visually fixed
-  // even where the JS lock silently does nothing.
-  const stageEl = document.getElementById('stage');
-
-  function lockOrientationCSS() {
-    const isPortrait = matchMedia('(orientation: portrait)').matches;
-    stageEl.classList.toggle('orient-lock--portrait', isPortrait);
-    stageEl.classList.toggle('orient-lock--landscape', !isPortrait);
-  }
-
-  function unlockOrientationCSS() {
-    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
-  }
-
-  function lockOrientation() {
-    lockOrientationCSS();
-    const lock = () => {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock(screen.orientation.type).catch(() => {});
-      }
-    };
-    if (document.fullscreenElement) {
-      lock();
-    } else if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().then(lock).catch(lock);
-    } else {
-      lock();
-    }
-  }
-
   document.getElementById('btn-start').addEventListener('click', () => {
-    lockOrientation();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
     stopTimer();
-    unlockOrientationCSS();
     setupOverlay.hidden = false;
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
-    lockOrientation();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
-    unlockOrientationCSS();
     winOverlay.hidden = true;
     setupOverlay.hidden = false;
   });
