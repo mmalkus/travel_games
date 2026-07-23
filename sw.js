@@ -1,4 +1,4 @@
-const CACHE_NAME = 'duet-memory-v2';
+const CACHE_NAME = 'duet-memory-v3';
 const ASSETS = [
   './',
   './index.html',
