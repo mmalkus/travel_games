@@ -196,22 +196,50 @@
   // Chrome only allows screen.orientation.lock() while the page is
   // fullscreen (or running as an installed app), and Safari doesn't
   // implement the lock at all — so on top of that best-effort JS call,
-  // stageEl gets a CSS class recording whichever orientation the device
-  // is already in when the game starts. A media query in style.css
-  // rotates the stage back whenever the device's actual orientation
-  // later disagrees with that class, so the page stays visually fixed
-  // even where the JS lock silently does nothing.
+  // we fake it: record the device's angle when the game starts, then
+  // whenever the *actual* angle changes, rotate #stage by the
+  // difference so the game stays visually fixed no matter which way
+  // the device turns. This needs the actual angle (0/90/180/270), not
+  // just a portrait/landscape media query — a plain @media query can't
+  // tell portrait-primary from portrait-secondary, so a 180deg flip
+  // (still "portrait" either way) went uncorrected and the two rails
+  // visibly swapped ends. screen.orientation.angle/type are read-only
+  // properties Safari *does* implement (only .lock() is missing), so
+  // this works even where the real lock call silently no-ops.
   const stageEl = document.getElementById('stage');
+  let lockedAngle = null;
+
+  function currentAngle() {
+    if (screen.orientation && typeof screen.orientation.angle === 'number') {
+      return screen.orientation.angle;
+    }
+    return matchMedia('(orientation: portrait)').matches ? 0 : 90;
+  }
+
+  function applyOrientationLock() {
+    if (lockedAngle === null) return;
+    const delta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
+    stageEl.style.setProperty('--orient-rotate', `${delta}deg`);
+    stageEl.classList.toggle('orient-locked', delta !== 0);
+    stageEl.classList.toggle('orient-locked--swap', delta === 90 || delta === 270);
+  }
 
   function lockOrientationCSS() {
-    const isPortrait = matchMedia('(orientation: portrait)').matches;
-    stageEl.classList.toggle('orient-lock--portrait', isPortrait);
-    stageEl.classList.toggle('orient-lock--landscape', !isPortrait);
+    lockedAngle = currentAngle();
+    applyOrientationLock();
   }
 
   function unlockOrientationCSS() {
-    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
+    lockedAngle = null;
+    stageEl.classList.remove('orient-locked', 'orient-locked--swap');
+    stageEl.style.removeProperty('--orient-rotate');
   }
+
+  if (screen.orientation && 'onchange' in screen.orientation) {
+    screen.orientation.addEventListener('change', applyOrientationLock);
+  }
+  window.addEventListener('orientationchange', applyOrientationLock);
+  matchMedia('(orientation: portrait)').addEventListener('change', applyOrientationLock);
 
   function lockOrientation() {
     lockOrientationCSS();
