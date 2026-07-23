@@ -273,26 +273,25 @@ button{font-family:inherit;}
 
 .win-card .win-mark{color:var(--gold);}
 
-/* ---------- Responsive ---------- */
-/* Landscape: the narrow ends are now left & right, so move the players there. */
-@media (orientation: landscape) and (min-width: 560px){
-  .table{
-    display:grid;
-    grid-template-columns:96px 1fr 96px;
-    align-items:stretch;
+/* ---------- Orientation lock ---------- */
+/* screen.orientation.lock() (see app.js) only works in fullscreen or
+   installed-app contexts and isn't supported by Safari at all, so it
+   can't be relied on alone. This CSS-only fallback catches every other
+   case: when the device is physically turned sideways, the whole page
+   is rotated back so the game always *looks* portrait, regardless of
+   what orientation the OS reports. */
+@media (orientation: landscape){
+  html{
+    position:fixed;
+    top:100%;
+    left:0;
+    width:100vh;
+    height:100vw;
+    transform-origin:left top;
+    transform:rotate(-90deg);
+    overflow-y:auto;
+    overflow-x:hidden;
   }
-  .rail{
-    flex-direction:column;
-    justify-content:center;
-    padding:20px 8px;
-    gap:10px;
-  }
-  .rail__label{writing-mode:vertical-rl; transform:rotate(180deg);}
-  /* Authored on the left for both: rail--p1's own 180deg flip carries
-     it over to its right edge, next to the board, matching rail--p2. */
-  .rail--p1{border-left:1px solid rgba(255,255,255,.05); border-right:none; border-top:none;}
-  .rail--p2{border-left:1px solid rgba(255,255,255,.05); border-top:none;}
-  .rail__score{font-size:2.2rem;}
 }
 
 @media (prefers-reduced-motion: reduce){
