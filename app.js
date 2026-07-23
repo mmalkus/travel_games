@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-3';
+  const APP_VERSION = '2026.07.23-5';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -199,13 +199,14 @@
   document.getElementById('version-tag').textContent = APP_VERSION;
 
   // ---- orientation lock ----
-  // Android gets its lock for free from the manifest's "orientation"
-  // field, but only for an app installed to the home screen — that's
-  // the assumed deployment target here, so there's no JS-side
-  // fullscreen + screen.orientation.lock() dance to also cover a plain
-  // browser tab. iOS has no equivalent (Safari ignores the manifest
-  // field and never implemented .lock() either), so this CSS/JS
-  // fallback is what actually does the work there: stageEl gets a CSS
+  // The manifest's "orientation" field is supposed to give Android a
+  // real OS-level lock for free when installed, no JS needed — but in
+  // practice that's not reliable even for a genuine installed WebAPK
+  // (confirmed rotating on a real Samsung device), so this fallback now
+  // runs on every platform as a safety net rather than trusting the
+  // manifest alone. iOS has no manifest-based equivalent at all (Safari
+  // ignores the field and never implemented .lock() either), so this is
+  // the only thing doing the work there. stageEl gets a CSS
   // class recording whichever orientation category (portrait/landscape)
   // the device is already in when the game starts. A plain @media
   // query in style.css rotates #stage back by 90deg the instant the
@@ -232,14 +233,6 @@
   // (player rails swapped). So the flip is needed in exactly the
   // opposite cases from what the naive residual suggests — everywhere
   // *except* the identity state, the correction is inverted below.
-  //
-  // This whole fallback is iOS-only. Android's manifest lock is a real
-  // OS-level lock — the window never rotates, so there's nothing for
-  // this CSS/JS to correct — and letting it run there anyway risked
-  // fighting Android's own rotation animation instead of just doing
-  // nothing.
-  const isIOS = /iP(hone|od|ad)/.test(navigator.platform)
-    || (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
   const stageEl = document.getElementById('stage');
   const stageFixEl = document.getElementById('stage-fix');
   let lockedCategory = null;
@@ -265,7 +258,6 @@
   }
 
   function lockOrientationCSS() {
-    if (!isIOS) return;
     lockedCategory = currentCategory();
     lockedAngle = currentAngle();
     stageEl.classList.toggle('orient-lock--portrait', lockedCategory === 'portrait');
@@ -274,23 +266,41 @@
   }
 
   function unlockOrientationCSS() {
-    if (!isIOS) return;
     lockedCategory = null;
     lockedAngle = null;
     stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
     stageFixEl.classList.remove('orient-flip');
   }
 
-  if (isIOS) {
-    if (screen.orientation && 'onchange' in screen.orientation) {
-      screen.orientation.addEventListener('change', applyFlipFix);
+  if (screen.orientation && 'onchange' in screen.orientation) {
+    screen.orientation.addEventListener('change', applyFlipFix);
+  }
+  window.addEventListener('orientationchange', applyFlipFix);
+  matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
+
+  // On top of the CSS/JS fallback above, also ask for the real lock —
+  // Chrome only grants screen.orientation.lock() while fullscreen (or
+  // running as an installed app), and it's a genuine OS-level lock when
+  // it's granted, unlike the manifest's "orientation" field, which
+  // turned out not to hold reliably even for a real installed WebAPK.
+  function lockOrientation() {
+    lockOrientationCSS();
+    const lock = () => {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock(screen.orientation.type).catch(() => {});
+      }
+    };
+    if (document.fullscreenElement) {
+      lock();
+    } else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().then(lock).catch(lock);
+    } else {
+      lock();
     }
-    window.addEventListener('orientationchange', applyFlipFix);
-    matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
   }
 
   document.getElementById('btn-start').addEventListener('click', () => {
-    lockOrientationCSS();
+    lockOrientation();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
@@ -300,7 +310,7 @@
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
-    lockOrientationCSS();
+    lockOrientation();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
