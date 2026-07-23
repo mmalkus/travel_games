@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-11';
+  const APP_VERSION = '2026.07.23-12';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
