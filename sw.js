@@ -1,7 +1,7 @@
 // Bump this on every deploy that changes any cached asset — the browser
 // only re-fetches files once it sees this string (and thus this file's
 // own bytes) change, since the fetch handler below is cache-first.
-const CACHE_NAME = 'duet-memory-v7';
+const CACHE_NAME = 'duet-memory-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -14,8 +14,15 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Bypass the browser's own HTTP cache here (not just Cache Storage) —
+  // otherwise a freshly (re)installed worker can still repopulate its
+  // cache with stale bytes the browser already had on disk.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(ASSETS.map((url) =>
+        fetch(url, { cache: 'reload' }).then((res) => cache.put(url, res))
+      ))
+    ).catch(() => {})
   );
   self.skipWaiting();
 });
