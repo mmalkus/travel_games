@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-2';
+  const APP_VERSION = '2026.07.23-3';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -327,7 +327,10 @@
 
   // ---- force update ----
   // Unregisters the service worker and clears its caches so the next
-  // load re-fetches everything fresh, then reloads.
+  // load re-fetches everything fresh, then reloads. A plain
+  // location.reload() isn't enough on its own — it can still be
+  // answered from the browser's own HTTP disk cache, a layer below
+  // Cache Storage — so navigate to a cache-busted URL instead.
   document.getElementById('btn-update').addEventListener('click', async () => {
     try {
       if ('serviceWorker' in navigator) {
@@ -339,7 +342,7 @@
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
     } finally {
-      location.reload();
+      location.href = location.pathname + '?t=' + Date.now();
     }
   });
 
