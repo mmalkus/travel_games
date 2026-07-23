@@ -23,11 +23,39 @@ body{
   color:var(--paper);
   font-family:var(--font-body);
   min-height:100vh;
-  overflow-x:hidden;
+  overflow:hidden;
   -webkit-font-smoothing:antialiased;
 }
 
 button{font-family:inherit;}
+
+/* ---------- Orientation lock ---------- */
+/* screen.orientation.lock() (see app.js) only works in fullscreen/
+   installed contexts on Chrome and isn't implemented at all on Safari,
+   so it silently fails for most players and the OS keeps rotating the
+   page. This CSS fallback catches that case: when the game locks in an
+   orientation, #stage gets a matching class. If the device's *actual*
+   orientation later disagrees with that class, we rotate #stage back
+   by 90deg and swap its box to the original viewport dimensions, so the
+   game visually stays exactly as it was when the lock was taken, no
+   matter which way the device physically turns.               */
+#stage{min-height:100vh;}
+@media (orientation:landscape){
+  #stage.orient-lock--portrait{
+    position:fixed; top:50%; left:50%;
+    width:100vh; height:100vw;
+    transform:translate(-50%,-50%) rotate(90deg);
+    overflow-y:auto;
+  }
+}
+@media (orientation:portrait){
+  #stage.orient-lock--landscape{
+    position:fixed; top:50%; left:50%;
+    width:100vh; height:100vw;
+    transform:translate(-50%,-50%) rotate(90deg);
+    overflow-y:auto;
+  }
+}
 
 /* ---------- Layout ---------- */
 /* Players always sit at the top & bottom ends, board fills the middle,
@@ -207,17 +235,6 @@ button{font-family:inherit;}
   font-size:clamp(1.6rem, 5vw, 2.4rem);
   border:1px solid rgba(0,0,0,.05);
 }
-
-.hint{
-  margin-top:18px;
-  color:var(--muted);
-  font-size:.85rem;
-  min-height:1.2em;
-  transition:transform .3s ease;
-}
-/* Flips face-up for whichever player sits opposite, so the turn
-   prompt is only ever upside-down for the player it isn't for. */
-.hint--flipped{transform:rotate(180deg);}
 
 /* ---------- Overlays ---------- */
 .overlay{
