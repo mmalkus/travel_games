@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-12';
+  const APP_VERSION = '2026.07.23-1';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -198,26 +198,14 @@
 
   document.getElementById('version-tag').textContent = APP_VERSION;
 
-  // Chrome's "Add to Home Screen" / WebAPK-generation flow fetches
-  // manifest.json subject to the browser's normal HTTP cache, same as
-  // any other request — so a stale cached copy can get baked into a
-  // freshly (re)installed WebAPK even right after a manifest change.
-  // Tagging the link with the current version forces a distinct URL
-  // any time it changes, which can never have a stale cache entry.
-  const manifestLink = document.querySelector('link[rel="manifest"]');
-  if (manifestLink) {
-    manifestLink.href = 'manifest.json?v=' + encodeURIComponent(APP_VERSION);
-  }
-
   // ---- orientation lock ----
-  // The manifest's "orientation" field is supposed to give Android a
-  // real OS-level lock for free when installed, no JS needed — but in
-  // practice that's not reliable even for a genuine installed WebAPK
-  // (confirmed rotating on a real Samsung device), so this fallback now
-  // runs on every platform as a safety net rather than trusting the
-  // manifest alone. iOS has no manifest-based equivalent at all (Safari
-  // ignores the field and never implemented .lock() either), so this is
-  // the only thing doing the work there. stageEl gets a CSS
+  // Android gets its lock for free from the manifest's "orientation"
+  // field, but only for an app installed to the home screen — that's
+  // the assumed deployment target here, so there's no JS-side
+  // fullscreen + screen.orientation.lock() dance to also cover a plain
+  // browser tab. iOS has no equivalent (Safari ignores the manifest
+  // field and never implemented .lock() either), so this CSS/JS
+  // fallback is what actually does the work there: stageEl gets a CSS
   // class recording whichever orientation category (portrait/landscape)
   // the device is already in when the game starts. A plain @media
   // query in style.css rotates #stage back by 90deg the instant the
@@ -264,15 +252,8 @@
     if (lockedAngle === null) return;
     const trueDelta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
     const naiveDelta = currentCategory() === lockedCategory ? 0 : 90;
-    // Keeping the content fixed relative to the table means rotating it
-    // opposite the device's own turn, not by the same amount — compare
-    // the CSS's fixed +90deg assumption against -trueDelta, not
-    // trueDelta itself. (Confirmed against real-device reports: the
-    // locked state and both single-direction 90/270deg turns were
-    // already right; only the in-place 180deg flip came out
-    // uncorrected, which this fixes without touching the other three.)
-    const residual = ((-trueDelta - naiveDelta) % 360 + 360) % 360;
-    stageFixEl.classList.toggle('orient-flip', residual === 180);
+    const residual = ((trueDelta - naiveDelta) % 360 + 360) % 360;
+    stageFixEl.classList.toggle('orient-flip', trueDelta !== 0 && residual === 0);
   }
 
   function lockOrientationCSS() {
@@ -283,58 +264,35 @@
     applyFlipFix();
   }
 
+  function unlockOrientationCSS() {
+    lockedCategory = null;
+    lockedAngle = null;
+    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
+    stageFixEl.classList.remove('orient-flip');
+  }
+
   if (screen.orientation && 'onchange' in screen.orientation) {
     screen.orientation.addEventListener('change', applyFlipFix);
   }
   window.addEventListener('orientationchange', applyFlipFix);
   matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
 
-  // On top of the CSS/JS fallback above, also ask for the real lock —
-  // Per the Screen Orientation spec, a browser's pre-lock condition can
-  // be satisfied either by the document being in real Fullscreen-API
-  // mode, OR by it being an installed app already presented in the
-  // "fullscreen" *display mode* (which display_override in manifest.json
-  // asks for) — the two are separate mechanisms. So try lock() directly
-  // first, since an installed, already-fullscreen-display PWA should
-  // qualify on its own; only fall back to explicitly invoking the
-  // Fullscreen API if the direct attempt is refused. Forcing
-  // requestFullscreen() unconditionally (the previous approach) risks
-  // it rejecting/no-oping precisely because the app is already
-  // borderless via display mode, with nothing left to "enter".
-  function lockOrientation() {
-    lockOrientationCSS();
-    if (!(screen.orientation && screen.orientation.lock)) return;
-    screen.orientation.lock(screen.orientation.type).catch(() => {
-      if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
-      document.documentElement.requestFullscreen()
-        .then(() => screen.orientation.lock(screen.orientation.type))
-        .catch(() => {});
-    });
-  }
-
-  // Lock immediately on load too, not just once a game starts — the
-  // setup/win screens should stay just as fixed in place as the game
-  // itself. This first call has no user gesture behind it yet, so the
-  // real fullscreen + screen.orientation.lock() attempt inside it will
-  // silently no-op; the CSS/JS fallback doesn't need a gesture and
-  // engages regardless. The very first tap of Start/Rematch below then
-  // retries the real lock with an actual gesture available.
-  lockOrientation();
-
   document.getElementById('btn-start').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
     stopTimer();
+    unlockOrientationCSS();
     setupOverlay.hidden = false;
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
+    unlockOrientationCSS();
     winOverlay.hidden = true;
     setupOverlay.hidden = false;
   });
@@ -357,10 +315,7 @@
 
   // ---- force update ----
   // Unregisters the service worker and clears its caches so the next
-  // load re-fetches everything fresh, then reloads. A plain
-  // location.reload() isn't enough on its own — it can still be
-  // answered from the browser's own HTTP disk cache, a layer below
-  // Cache Storage — so navigate to a cache-busted URL instead.
+  // load re-fetches everything fresh, then reloads.
   document.getElementById('btn-update').addEventListener('click', async () => {
     try {
       if ('serviceWorker' in navigator) {
@@ -372,7 +327,7 @@
         await Promise.all(keys.map((k) => caches.delete(k)));
       }
     } finally {
-      location.href = location.pathname + '?t=' + Date.now();
+      location.reload();
     }
   });
 
