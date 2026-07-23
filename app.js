@@ -22,6 +22,7 @@
   const timerEl = document.getElementById('timer').querySelector('strong');
   const scoreEls = { 1: document.getElementById('score-p1'), 2: document.getElementById('score-p2') };
   const railEls = { 1: document.getElementById('rail-p1'), 2: document.getElementById('rail-p2') };
+  const labelEls = { 1: railEls[1].querySelector('.rail__label'), 2: railEls[2].querySelector('.rail__label') };
 
   const setupOverlay = document.getElementById('setup-overlay');
   const winOverlay = document.getElementById('win-overlay');
@@ -158,10 +159,14 @@
   }
 
   function updateTurnUI() {
-    railEls[1].classList.toggle('rail--active', state.current === 1);
-    railEls[2].classList.toggle('rail--active', state.current === 2);
+    const p1Active = state.current === 1;
+    const p2Active = state.current === 2;
+    railEls[1].classList.toggle('rail--active', p1Active);
+    railEls[2].classList.toggle('rail--active', p2Active);
+    labelEls[1].textContent = p1Active ? 'Your turn' : 'Player 1';
+    labelEls[2].textContent = p2Active ? 'Your turn' : 'Player 2';
     hintEl.textContent = `Player ${state.current} — flip two cards`;
-    hintEl.classList.toggle('hint--flipped', state.current === 1);
+    hintEl.classList.toggle('hint--flipped', p1Active);
   }
 
   function checkWin() {
@@ -190,7 +195,30 @@
   wireSegmented(gridSizeGroup, 'size');
   wireSegmented(deckThemeGroup, 'theme');
 
+  // ---- orientation lock ----
+  // Chrome only allows screen.orientation.lock() while the page is
+  // fullscreen (or running as an installed app), and Safari doesn't
+  // implement the lock at all — this is best-effort and silently no-ops
+  // wherever the platform doesn't support it. Locks to whichever
+  // orientation the device is already in when the game starts, since
+  // the layout works either way and only mid-game rotation is disruptive.
+  function lockOrientation() {
+    const lock = () => {
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock(screen.orientation.type).catch(() => {});
+      }
+    };
+    if (document.fullscreenElement) {
+      lock();
+    } else if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().then(lock).catch(lock);
+    } else {
+      lock();
+    }
+  }
+
   document.getElementById('btn-start').addEventListener('click', () => {
+    lockOrientation();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
@@ -199,6 +227,7 @@
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
+    lockOrientation();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
@@ -227,10 +256,5 @@
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
-  }
-
-  // ---- orientation lock ----
-  if (screen.orientation && screen.orientation.lock) {
-    screen.orientation.lock('portrait').catch(() => {});
   }
 })();
