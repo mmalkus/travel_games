@@ -130,9 +130,10 @@ button{font-family:inherit;}
 /* ---------- Board & cards ---------- */
 .board{
   --cols:4;
+  --gap:12px;
   display:grid;
   grid-template-columns:repeat(var(--cols), minmax(0,1fr));
-  gap:12px;
+  gap:var(--gap);
   width:100%;
   max-width:720px;
   perspective:1200px;
@@ -229,6 +230,8 @@ button{font-family:inherit;}
   background:transparent; color:var(--muted); font-size:.82rem; cursor:pointer;
   transition:background .2s ease, color .2s ease;
 }
+.segmented--wrap{flex-wrap:wrap;}
+.segmented--wrap button{flex:1 1 calc(33.333% - 4px);}
 .segmented button.active{background:rgba(255,255,255,.1); color:var(--paper);}
 
 .btn-primary{
