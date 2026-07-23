@@ -161,6 +161,7 @@
     railEls[1].classList.toggle('rail--active', state.current === 1);
     railEls[2].classList.toggle('rail--active', state.current === 2);
     hintEl.textContent = `Player ${state.current} — flip two cards`;
+    hintEl.classList.toggle('hint--flipped', state.current === 1);
   }
 
   function checkWin() {

@@ -48,7 +48,11 @@ button{font-family:inherit;}
   position:relative;
   transition:background .35s ease;
 }
-.rail--p1{border-right:none; border-bottom:1px solid rgba(255,255,255,.05); order:0;}
+/* Player 1 sits opposite Player 2 across the device, so their whole
+   rail is mirrored 180deg to read right-side-up from their seat. The
+   border is authored on the pre-rotation edge so it still lands next
+   to the board once flipped. */
+.rail--p1{border-right:none; border-top:1px solid rgba(255,255,255,.05); order:0; transform:rotate(180deg);}
 .board-wrap{order:1;}
 .rail--p2{border-left:none; border-top:1px solid rgba(255,255,255,.05); order:2;}
 
@@ -193,7 +197,11 @@ button{font-family:inherit;}
   color:var(--muted);
   font-size:.85rem;
   min-height:1.2em;
+  transition:transform .3s ease;
 }
+/* Flips face-up for whichever player sits opposite, so the turn
+   prompt is only ever upside-down for the player it isn't for. */
+.hint--flipped{transform:rotate(180deg);}
 
 /* ---------- Overlays ---------- */
 .overlay{
@@ -280,7 +288,9 @@ button{font-family:inherit;}
     gap:10px;
   }
   .rail__label{writing-mode:vertical-rl; transform:rotate(180deg);}
-  .rail--p1{border-right:1px solid rgba(255,255,255,.05); border-bottom:none;}
+  /* Authored on the left for both: rail--p1's own 180deg flip carries
+     it over to its right edge, next to the board, matching rail--p2. */
+  .rail--p1{border-left:1px solid rgba(255,255,255,.05); border-right:none; border-top:none;}
   .rail--p2{border-left:1px solid rgba(255,255,255,.05); border-top:none;}
   .rail__score{font-size:2.2rem;}
 }
