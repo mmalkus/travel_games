@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-8';
+  const APP_VERSION = '2026.07.23-9';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -294,18 +294,31 @@
   // running as an installed app), and it's a genuine OS-level lock when
   // it's granted, unlike the manifest's "orientation" field, which
   // turned out not to hold reliably even for a real installed WebAPK.
+  const lockStatusEl = document.getElementById('lock-status');
+  function reportLockStatus(text) {
+    if (lockStatusEl) lockStatusEl.textContent = 'orientation lock: ' + text;
+  }
+
   function lockOrientation() {
     lockOrientationCSS();
     const lock = () => {
       if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock(screen.orientation.type).catch(() => {});
+        screen.orientation.lock(screen.orientation.type)
+          .then(() => reportLockStatus('granted'))
+          .catch((err) => reportLockStatus('denied (' + (err && err.name) + ')'));
+      } else {
+        reportLockStatus('unsupported');
       }
     };
     if (document.fullscreenElement) {
       lock();
     } else if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().then(lock).catch(lock);
+      document.documentElement.requestFullscreen().then(lock).catch((err) => {
+        reportLockStatus('fullscreen denied (' + (err && err.name) + ')');
+        lock();
+      });
     } else {
+      reportLockStatus('no fullscreen API');
       lock();
     }
   }
