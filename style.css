@@ -35,30 +35,24 @@ button{font-family:inherit;}
    installed contexts on Chrome and isn't implemented at all on iOS
    Safari — not even for a home-screen-installed app, and not via the
    manifest's "orientation" field either. There is no API that can stop
-   iOS from rotating. This CSS fallback is the closest a web page can
-   get: when the game locks in an orientation, #stage gets a matching
-   class, and a media query rotates #stage back by 90deg whenever the
-   device's *actual* orientation later disagrees with it, so the game
-   itself stays fixed in place instead of reflowing when the phone
-   turns — matching how the real lock behaves on Android. Safari's own
-   chrome (the URL bar) still rotates with the device since a web page
-   can't control that part; only the game content can be held fixed. */
+   iOS from rotating. This is the closest a web page can get instead:
+   app.js records the device's angle when the game locks, and rotates
+   #stage by the live difference from that angle any time it changes
+   (--orient-rotate), so the game itself stays fixed in place instead
+   of reflowing when the phone turns — matching how the real lock
+   behaves on Android, for a 90/180/270deg turn in either direction.
+   Safari's own chrome (the URL bar) still rotates with the device
+   since a web page can't control that part; only the game content can
+   be held fixed. */
 #stage{height:100%;}
-@media (orientation:landscape){
-  #stage.orient-lock--portrait{
-    position:fixed; top:50%; left:50%;
-    width:100vh; height:100vw;
-    width:100dvh; height:100dvw;
-    transform:translate(-50%,-50%) rotate(90deg);
-  }
+#stage.orient-locked{
+  transform:rotate(var(--orient-rotate, 0deg));
 }
-@media (orientation:portrait){
-  #stage.orient-lock--landscape{
-    position:fixed; top:50%; left:50%;
-    width:100vh; height:100vw;
-    width:100dvh; height:100dvw;
-    transform:translate(-50%,-50%) rotate(90deg);
-  }
+#stage.orient-locked--swap{
+  position:fixed; top:50%; left:50%;
+  width:100vh; height:100vw;
+  width:100dvh; height:100dvw;
+  transform:translate(-50%,-50%) rotate(var(--orient-rotate, 0deg));
 }
 
 /* ---------- Layout ---------- */
