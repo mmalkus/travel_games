@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-7';
+  const APP_VERSION = '2026.07.23-10';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -283,13 +283,6 @@
     applyFlipFix();
   }
 
-  function unlockOrientationCSS() {
-    lockedCategory = null;
-    lockedAngle = null;
-    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
-    stageFixEl.classList.remove('orient-flip');
-  }
-
   if (screen.orientation && 'onchange' in screen.orientation) {
     screen.orientation.addEventListener('change', applyFlipFix);
   }
@@ -297,25 +290,50 @@
   matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
 
   // On top of the CSS/JS fallback above, also ask for the real lock —
-  // Chrome only grants screen.orientation.lock() while fullscreen (or
-  // running as an installed app), and it's a genuine OS-level lock when
-  // it's granted, unlike the manifest's "orientation" field, which
-  // turned out not to hold reliably even for a real installed WebAPK.
+  // Per the Screen Orientation spec, a browser's pre-lock condition can
+  // be satisfied either by the document being in real Fullscreen-API
+  // mode, OR by it being an installed app already presented in the
+  // "fullscreen" *display mode* (which display_override in manifest.json
+  // asks for) — the two are separate mechanisms. So try lock() directly
+  // first, since an installed, already-fullscreen-display PWA should
+  // qualify on its own; only fall back to explicitly invoking the
+  // Fullscreen API if the direct attempt is refused. Forcing
+  // requestFullscreen() unconditionally (the previous approach) risks
+  // it rejecting/no-oping precisely because the app is already
+  // borderless via display mode, with nothing left to "enter".
+  const lockStatusEl = document.getElementById('lock-status');
+  function reportLockStatus(text) {
+    if (lockStatusEl) lockStatusEl.textContent = 'orientation lock: ' + text;
+  }
+
   function lockOrientation() {
     lockOrientationCSS();
-    const lock = () => {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock(screen.orientation.type).catch(() => {});
-      }
-    };
-    if (document.fullscreenElement) {
-      lock();
-    } else if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().then(lock).catch(lock);
-    } else {
-      lock();
+    if (!(screen.orientation && screen.orientation.lock)) {
+      reportLockStatus('unsupported');
+      return;
     }
+    screen.orientation.lock(screen.orientation.type)
+      .then(() => reportLockStatus('granted'))
+      .catch((err) => {
+        if (document.fullscreenElement || !document.documentElement.requestFullscreen) {
+          reportLockStatus('denied (' + (err && err.name) + ')');
+          return;
+        }
+        document.documentElement.requestFullscreen()
+          .then(() => screen.orientation.lock(screen.orientation.type))
+          .then(() => reportLockStatus('granted (via fullscreen)'))
+          .catch((err2) => reportLockStatus('denied (' + (err2 && err2.name) + ')'));
+      });
   }
+
+  // Lock immediately on load too, not just once a game starts — the
+  // setup/win screens should stay just as fixed in place as the game
+  // itself. This first call has no user gesture behind it yet, so the
+  // real fullscreen + screen.orientation.lock() attempt inside it will
+  // silently no-op; the CSS/JS fallback doesn't need a gesture and
+  // engages regardless. The very first tap of Start/Rematch below then
+  // retries the real lock with an actual gesture available.
+  lockOrientation();
 
   document.getElementById('btn-start').addEventListener('click', () => {
     lockOrientation();
@@ -323,7 +341,6 @@
   });
   document.getElementById('btn-new').addEventListener('click', () => {
     stopTimer();
-    unlockOrientationCSS();
     setupOverlay.hidden = false;
     winOverlay.hidden = true;
   });
@@ -332,7 +349,6 @@
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
-    unlockOrientationCSS();
     winOverlay.hidden = true;
     setupOverlay.hidden = false;
   });
