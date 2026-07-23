@@ -193,17 +193,21 @@
   wireSegmented(deckThemeGroup, 'theme');
 
   // ---- orientation lock ----
-  // Chrome only allows screen.orientation.lock() while the page is
-  // fullscreen (or running as an installed app), and Safari doesn't
-  // implement the lock at all — so on top of that best-effort JS call,
-  // stageEl gets a CSS class recording whichever orientation category
-  // (portrait/landscape) the device is already in when the game
-  // starts. A plain @media query in style.css rotates #stage back by
-  // 90deg the instant the device's *actual* category later disagrees
-  // with that class. This has to stay a media query rather than a JS
-  // handler: it needs to land in the same layout pass as the browser's
-  // own reflow, or there's a visible flash of the unrotated layout for
-  // the moment before a JS event handler could catch up.
+  // Android gets its lock for free from the manifest's "orientation"
+  // field, but only for an app installed to the home screen — that's
+  // the assumed deployment target here, so there's no JS-side
+  // fullscreen + screen.orientation.lock() dance to also cover a plain
+  // browser tab. iOS has no equivalent (Safari ignores the manifest
+  // field and never implemented .lock() either), so this CSS/JS
+  // fallback is what actually does the work there: stageEl gets a CSS
+  // class recording whichever orientation category (portrait/landscape)
+  // the device is already in when the game starts. A plain @media
+  // query in style.css rotates #stage back by 90deg the instant the
+  // device's *actual* category later disagrees with that class. This
+  // has to stay a media query rather than a JS handler: it needs to
+  // land in the same layout pass as the browser's own reflow, or
+  // there's a visible flash of the unrotated layout for the moment
+  // before a JS event handler could catch up.
   //
   // A plain category media query can't tell portrait-primary from
   // portrait-secondary (or landscape-primary from -secondary) though,
@@ -261,24 +265,8 @@
   window.addEventListener('orientationchange', applyFlipFix);
   matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
 
-  function lockOrientation() {
-    lockOrientationCSS();
-    const lock = () => {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock(screen.orientation.type).catch(() => {});
-      }
-    };
-    if (document.fullscreenElement) {
-      lock();
-    } else if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().then(lock).catch(lock);
-    } else {
-      lock();
-    }
-  }
-
   document.getElementById('btn-start').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
@@ -288,7 +276,7 @@
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
