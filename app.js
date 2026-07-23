@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-5';
+  const APP_VERSION = '2026.07.23-6';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -253,8 +253,15 @@
     if (lockedAngle === null) return;
     const trueDelta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
     const naiveDelta = currentCategory() === lockedCategory ? 0 : 90;
-    const residual = ((trueDelta - naiveDelta) % 360 + 360) % 360;
-    stageFixEl.classList.toggle('orient-flip', trueDelta !== 0 && residual === 0);
+    // Keeping the content fixed relative to the table means rotating it
+    // opposite the device's own turn, not by the same amount — compare
+    // the CSS's fixed +90deg assumption against -trueDelta, not
+    // trueDelta itself. (Confirmed against real-device reports: the
+    // locked state and both single-direction 90/270deg turns were
+    // already right; only the in-place 180deg flip came out
+    // uncorrected, which this fixes without touching the other three.)
+    const residual = ((-trueDelta - naiveDelta) % 360 + 360) % 360;
+    stageFixEl.classList.toggle('orient-flip', residual === 180);
   }
 
   function lockOrientationCSS() {
