@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-6';
+  const APP_VERSION = '2026.07.23-7';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -197,6 +197,17 @@
   wireSegmented(deckThemeGroup, 'theme');
 
   document.getElementById('version-tag').textContent = APP_VERSION;
+
+  // Chrome's "Add to Home Screen" / WebAPK-generation flow fetches
+  // manifest.json subject to the browser's normal HTTP cache, same as
+  // any other request — so a stale cached copy can get baked into a
+  // freshly (re)installed WebAPK even right after a manifest change.
+  // Tagging the link with the current version forces a distinct URL
+  // any time it changes, which can never have a stale cache entry.
+  const manifestLink = document.querySelector('link[rel="manifest"]');
+  if (manifestLink) {
+    manifestLink.href = 'manifest.json?v=' + encodeURIComponent(APP_VERSION);
+  }
 
   // ---- orientation lock ----
   // The manifest's "orientation" field is supposed to give Android a
