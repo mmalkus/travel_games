@@ -193,72 +193,80 @@
   wireSegmented(deckThemeGroup, 'theme');
 
   // ---- orientation lock ----
-  // Chrome only allows screen.orientation.lock() while the page is
-  // fullscreen (or running as an installed app), and Safari doesn't
-  // implement the lock at all — so on top of that best-effort JS call,
-  // we fake it: record the device's angle when the game starts, then
-  // whenever the *actual* angle changes, rotate #stage by the
-  // difference so the game stays visually fixed no matter which way
-  // the device turns. This needs the actual angle (0/90/180/270), not
-  // just a portrait/landscape media query — a plain @media query can't
-  // tell portrait-primary from portrait-secondary, so a 180deg flip
-  // (still "portrait" either way) went uncorrected and the two rails
-  // visibly swapped ends. screen.orientation.angle/type are read-only
-  // properties Safari *does* implement (only .lock() is missing), so
-  // this works even where the real lock call silently no-ops.
+  // Android gets its lock for free from the manifest's "orientation"
+  // field, but only for an app installed to the home screen — that's
+  // the assumed deployment target here, so there's no JS-side
+  // fullscreen + screen.orientation.lock() dance to also cover a plain
+  // browser tab. iOS has no equivalent (Safari ignores the manifest
+  // field and never implemented .lock() either), so this CSS/JS
+  // fallback is what actually does the work there: stageEl gets a CSS
+  // class recording whichever orientation category (portrait/landscape)
+  // the device is already in when the game starts. A plain @media
+  // query in style.css rotates #stage back by 90deg the instant the
+  // device's *actual* category later disagrees with that class. This
+  // has to stay a media query rather than a JS handler: it needs to
+  // land in the same layout pass as the browser's own reflow, or
+  // there's a visible flash of the unrotated layout for the moment
+  // before a JS event handler could catch up.
+  //
+  // A plain category media query can't tell portrait-primary from
+  // portrait-secondary (or landscape-primary from -secondary) though,
+  // so it can still land 180deg off: a flip straight to the opposite
+  // side within the same category, or turning into landscape from the
+  // "other" direction. #stage-fix corrects that residual using the
+  // real screen.orientation.angle (a read-only property Safari does
+  // implement, unlike .lock()) — the residual between the media
+  // query's assumption and the true angle is always exactly 0 or
+  // 180deg, so this only ever adds a plain flip, and only in those
+  // rarer cases, leaving the common single-direction rotation untouched
+  // and instant.
   const stageEl = document.getElementById('stage');
+  const stageFixEl = document.getElementById('stage-fix');
+  let lockedCategory = null;
   let lockedAngle = null;
+
+  function currentCategory() {
+    return matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape';
+  }
 
   function currentAngle() {
     if (screen.orientation && typeof screen.orientation.angle === 'number') {
       return screen.orientation.angle;
     }
-    return matchMedia('(orientation: portrait)').matches ? 0 : 90;
+    return currentCategory() === 'portrait' ? 0 : 90;
   }
 
-  function applyOrientationLock() {
+  function applyFlipFix() {
     if (lockedAngle === null) return;
-    const delta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
-    stageEl.style.setProperty('--orient-rotate', `${delta}deg`);
-    stageEl.classList.toggle('orient-locked', delta !== 0);
-    stageEl.classList.toggle('orient-locked--swap', delta === 90 || delta === 270);
+    const trueDelta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
+    const naiveDelta = currentCategory() === lockedCategory ? 0 : 90;
+    const residual = ((trueDelta - naiveDelta) % 360 + 360) % 360;
+    stageFixEl.classList.toggle('orient-flip', residual === 180);
   }
 
   function lockOrientationCSS() {
+    lockedCategory = currentCategory();
     lockedAngle = currentAngle();
-    applyOrientationLock();
+    stageEl.classList.toggle('orient-lock--portrait', lockedCategory === 'portrait');
+    stageEl.classList.toggle('orient-lock--landscape', lockedCategory === 'landscape');
+    applyFlipFix();
   }
 
   function unlockOrientationCSS() {
+    lockedCategory = null;
     lockedAngle = null;
-    stageEl.classList.remove('orient-locked', 'orient-locked--swap');
-    stageEl.style.removeProperty('--orient-rotate');
+    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
+    stageFixEl.classList.remove('orient-flip');
   }
 
   if (screen.orientation && 'onchange' in screen.orientation) {
-    screen.orientation.addEventListener('change', applyOrientationLock);
+    screen.orientation.addEventListener('change', applyFlipFix);
   }
-  window.addEventListener('orientationchange', applyOrientationLock);
-  matchMedia('(orientation: portrait)').addEventListener('change', applyOrientationLock);
-
-  function lockOrientation() {
-    lockOrientationCSS();
-    const lock = () => {
-      if (screen.orientation && screen.orientation.lock) {
-        screen.orientation.lock(screen.orientation.type).catch(() => {});
-      }
-    };
-    if (document.fullscreenElement) {
-      lock();
-    } else if (document.documentElement.requestFullscreen) {
-      document.documentElement.requestFullscreen().then(lock).catch(lock);
-    } else {
-      lock();
-    }
-  }
+  window.addEventListener('orientationchange', applyFlipFix);
+  matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
 
   document.getElementById('btn-start').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
@@ -268,7 +276,7 @@
     winOverlay.hidden = true;
   });
   document.getElementById('btn-rematch').addEventListener('click', () => {
-    lockOrientation();
+    lockOrientationCSS();
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
