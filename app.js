@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-7';
+  const APP_VERSION = '2026.07.23-8';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -283,13 +283,6 @@
     applyFlipFix();
   }
 
-  function unlockOrientationCSS() {
-    lockedCategory = null;
-    lockedAngle = null;
-    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
-    stageFixEl.classList.remove('orient-flip');
-  }
-
   if (screen.orientation && 'onchange' in screen.orientation) {
     screen.orientation.addEventListener('change', applyFlipFix);
   }
@@ -317,13 +310,21 @@
     }
   }
 
+  // Lock immediately on load too, not just once a game starts — the
+  // setup/win screens should stay just as fixed in place as the game
+  // itself. This first call has no user gesture behind it yet, so the
+  // real fullscreen + screen.orientation.lock() attempt inside it will
+  // silently no-op; the CSS/JS fallback doesn't need a gesture and
+  // engages regardless. The very first tap of Start/Rematch below then
+  // retries the real lock with an actual gesture available.
+  lockOrientation();
+
   document.getElementById('btn-start').addEventListener('click', () => {
     lockOrientation();
     startGame(choice.size, choice.theme);
   });
   document.getElementById('btn-new').addEventListener('click', () => {
     stopTimer();
-    unlockOrientationCSS();
     setupOverlay.hidden = false;
     winOverlay.hidden = true;
   });
@@ -332,7 +333,6 @@
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
-    unlockOrientationCSS();
     winOverlay.hidden = true;
     setupOverlay.hidden = false;
   });
