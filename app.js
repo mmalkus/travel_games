@@ -226,6 +226,12 @@
   // 180deg, so this only ever adds a plain flip, and only in those
   // rarer cases, leaving the common single-direction rotation untouched
   // and instant.
+  //
+  // Confirmed on a real iPhone: only the locked (0deg-delta) state came
+  // out right; all three other states came out a uniform 180deg off
+  // (player rails swapped). So the flip is needed in exactly the
+  // opposite cases from what the naive residual suggests — everywhere
+  // *except* the identity state, the correction is inverted below.
   const stageEl = document.getElementById('stage');
   const stageFixEl = document.getElementById('stage-fix');
   let lockedCategory = null;
@@ -247,7 +253,7 @@
     const trueDelta = ((currentAngle() - lockedAngle) % 360 + 360) % 360;
     const naiveDelta = currentCategory() === lockedCategory ? 0 : 90;
     const residual = ((trueDelta - naiveDelta) % 360 + 360) % 360;
-    stageFixEl.classList.toggle('orient-flip', residual === 180);
+    stageFixEl.classList.toggle('orient-flip', trueDelta !== 0 && residual === 0);
   }
 
   function lockOrientationCSS() {
