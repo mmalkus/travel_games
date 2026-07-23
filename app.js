@@ -2,15 +2,18 @@
   'use strict';
 
   const DECKS = {
-    symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳'],
-    animals: ['🐵','🐶','🐱','🦁','🐮','🐷','🐸','🐨','🐼','🦊','🐰','🐻'],
-    planets: ['🪐','🌍','🌕','🌞','☄️','🌟','🌌','🛰️','🚀','🌠','🔭','🌑'],
+    symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
+    animals: ['🐵','🐶','🐱','🦁','🐮','🐷','🐸','🐨','🐼','🦊','🐰','🐻','🐯','🐹','🐭','🐔','🐧','🐦','🦆','🦉','🦇','🐗','🐴','🐝'],
+    planets: ['🪐','🌍','🌕','🌞','☄️','🌟','🌌','🛰️','🚀','🌠','🔭','🌑','🌎','🌏','🌒','🌓','🌔','🌖','🌗','🌘','🌙','✨','💫','🛸'],
   };
 
   const SIZES = {
+    '3x2': { cols: 3, pairs: 3 },
     '4x3': { cols: 4, pairs: 6 },
     '4x4': { cols: 4, pairs: 8 },
     '6x4': { cols: 6, pairs: 12 },
+    '6x6': { cols: 6, pairs: 18 },
+    '8x6': { cols: 8, pairs: 24 },
   };
 
   const boardEl = document.getElementById('board');
@@ -49,6 +52,7 @@
   function startGame(sizeKey, themeKey) {
     const { cols } = SIZES[sizeKey];
     boardEl.style.setProperty('--cols', cols);
+    boardEl.style.setProperty('--gap', cols >= 8 ? '6px' : cols >= 6 ? '8px' : '12px');
 
     state = {
       deck: buildDeck(sizeKey, themeKey),
@@ -157,6 +161,7 @@
     railEls[1].classList.toggle('rail--active', state.current === 1);
     railEls[2].classList.toggle('rail--active', state.current === 2);
     hintEl.textContent = `Player ${state.current} — flip two cards`;
+    hintEl.classList.toggle('hint--flipped', state.current === 1);
   }
 
   function checkWin() {
@@ -222,5 +227,10 @@
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
+  }
+
+  // ---- orientation lock ----
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('portrait').catch(() => {});
   }
 })();

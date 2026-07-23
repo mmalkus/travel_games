@@ -30,33 +30,39 @@ body{
 button{font-family:inherit;}
 
 /* ---------- Layout ---------- */
+/* Mobile-first / portrait: players sit at the narrow top & bottom ends,
+   the board fills the wide middle. */
 .table{
-  display:grid;
-  grid-template-columns:96px 1fr 96px;
+  display:flex;
+  flex-direction:column;
   min-height:100vh;
-  align-items:stretch;
 }
 
 .rail{
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
   align-items:center;
-  justify-content:center;
-  gap:10px;
-  padding:20px 8px;
+  justify-content:space-between;
+  gap:14px;
+  padding:10px 18px;
   position:relative;
   transition:background .35s ease;
 }
-.rail--p1{border-right:1px solid rgba(255,255,255,.05);}
-.rail--p2{border-left:1px solid rgba(255,255,255,.05);}
+/* Player 1 sits opposite Player 2 across the device, so their whole
+   rail is mirrored 180deg to read right-side-up from their seat. The
+   border is authored on the pre-rotation edge so it still lands next
+   to the board once flipped. */
+.rail--p1{border-right:none; border-top:1px solid rgba(255,255,255,.05); order:0; transform:rotate(180deg);}
+.board-wrap{order:1;}
+.rail--p2{border-left:none; border-top:1px solid rgba(255,255,255,.05); order:2;}
 
 .rail__label{
   font-size:.68rem;
   letter-spacing:.08em;
   text-transform:uppercase;
   color:var(--muted);
-  writing-mode:vertical-rl;
-  transform:rotate(180deg);
+  writing-mode:horizontal-tb;
+  transform:none;
 }
 .rail--p1 .rail__label{color:color-mix(in srgb, var(--p1) 70%, var(--muted));}
 .rail--p2 .rail__label{color:color-mix(in srgb, var(--p2) 70%, var(--muted));}
@@ -64,7 +70,7 @@ button{font-family:inherit;}
 .rail__score{
   font-family:var(--font-display);
   font-weight:800;
-  font-size:2.2rem;
+  font-size:1.5rem;
   line-height:1;
 }
 .rail__turn-dot{
@@ -128,9 +134,10 @@ button{font-family:inherit;}
 /* ---------- Board & cards ---------- */
 .board{
   --cols:4;
+  --gap:12px;
   display:grid;
   grid-template-columns:repeat(var(--cols), minmax(0,1fr));
-  gap:12px;
+  gap:var(--gap);
   width:100%;
   max-width:720px;
   perspective:1200px;
@@ -190,7 +197,11 @@ button{font-family:inherit;}
   color:var(--muted);
   font-size:.85rem;
   min-height:1.2em;
+  transition:transform .3s ease;
 }
+/* Flips face-up for whichever player sits opposite, so the turn
+   prompt is only ever upside-down for the player it isn't for. */
+.hint--flipped{transform:rotate(180deg);}
 
 /* ---------- Overlays ---------- */
 .overlay{
@@ -227,6 +238,8 @@ button{font-family:inherit;}
   background:transparent; color:var(--muted); font-size:.82rem; cursor:pointer;
   transition:background .2s ease, color .2s ease;
 }
+.segmented--wrap{flex-wrap:wrap;}
+.segmented--wrap button{flex:1 1 calc(33.333% - 4px);}
 .segmented button.active{background:rgba(255,255,255,.1); color:var(--paper);}
 
 .btn-primary{
@@ -261,19 +274,25 @@ button{font-family:inherit;}
 .win-card .win-mark{color:var(--gold);}
 
 /* ---------- Responsive ---------- */
-@media (max-width: 720px){
-  .table{grid-template-columns:1fr;}
-  .rail{
-    flex-direction:row;
-    justify-content:space-between;
-    padding:10px 18px;
-    gap:14px;
+/* Landscape: the narrow ends are now left & right, so move the players there. */
+@media (orientation: landscape) and (min-width: 560px){
+  .table{
+    display:grid;
+    grid-template-columns:96px 1fr 96px;
+    align-items:stretch;
   }
-  .rail__label{writing-mode:horizontal-tb; transform:none;}
-  .rail--p1{border-right:none; border-bottom:1px solid rgba(255,255,255,.05); order:0;}
-  .board-wrap{order:1;}
-  .rail--p2{border-left:none; border-top:1px solid rgba(255,255,255,.05); order:2;}
-  .rail__score{font-size:1.5rem;}
+  .rail{
+    flex-direction:column;
+    justify-content:center;
+    padding:20px 8px;
+    gap:10px;
+  }
+  .rail__label{writing-mode:vertical-rl; transform:rotate(180deg);}
+  /* Authored on the left for both: rail--p1's own 180deg flip carries
+     it over to its right edge, next to the board, matching rail--p2. */
+  .rail--p1{border-left:1px solid rgba(255,255,255,.05); border-right:none; border-top:none;}
+  .rail--p2{border-left:1px solid rgba(255,255,255,.05); border-top:none;}
+  .rail__score{font-size:2.2rem;}
 }
 
 @media (prefers-reduced-motion: reduce){
