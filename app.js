@@ -232,6 +232,14 @@
   // (player rails swapped). So the flip is needed in exactly the
   // opposite cases from what the naive residual suggests — everywhere
   // *except* the identity state, the correction is inverted below.
+  //
+  // This whole fallback is iOS-only. Android's manifest lock is a real
+  // OS-level lock — the window never rotates, so there's nothing for
+  // this CSS/JS to correct — and letting it run there anyway risked
+  // fighting Android's own rotation animation instead of just doing
+  // nothing.
+  const isIOS = /iP(hone|od|ad)/.test(navigator.platform)
+    || (navigator.userAgent.includes('Mac') && navigator.maxTouchPoints > 1);
   const stageEl = document.getElementById('stage');
   const stageFixEl = document.getElementById('stage-fix');
   let lockedCategory = null;
@@ -257,6 +265,7 @@
   }
 
   function lockOrientationCSS() {
+    if (!isIOS) return;
     lockedCategory = currentCategory();
     lockedAngle = currentAngle();
     stageEl.classList.toggle('orient-lock--portrait', lockedCategory === 'portrait');
@@ -265,17 +274,20 @@
   }
 
   function unlockOrientationCSS() {
+    if (!isIOS) return;
     lockedCategory = null;
     lockedAngle = null;
     stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
     stageFixEl.classList.remove('orient-flip');
   }
 
-  if (screen.orientation && 'onchange' in screen.orientation) {
-    screen.orientation.addEventListener('change', applyFlipFix);
+  if (isIOS) {
+    if (screen.orientation && 'onchange' in screen.orientation) {
+      screen.orientation.addEventListener('change', applyFlipFix);
+    }
+    window.addEventListener('orientationchange', applyFlipFix);
+    matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
   }
-  window.addEventListener('orientationchange', applyFlipFix);
-  matchMedia('(orientation: portrait)').addEventListener('change', applyFlipFix);
 
   document.getElementById('btn-start').addEventListener('click', () => {
     lockOrientationCSS();
