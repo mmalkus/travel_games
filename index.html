@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Duet — 2-Player Memory</title>
+<meta name="description" content="A two-player memory matching game, installable as an app.">
+<meta name="theme-color" content="#14161F">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="table">
+
+  <!-- Player 1 rail -->
+  <aside class="rail rail--p1" id="rail-p1" aria-label="Player 1">
+    <span class="rail__label">Player 1</span>
+    <span class="rail__score" id="score-p1">0</span>
+    <span class="rail__turn-dot" aria-hidden="true"></span>
+  </aside>
+
+  <main class="board-wrap">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-new" title="New game" aria-label="New game">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
+      </button>
+
+      <div class="brand">
+        <span class="brand__mark">◆</span>
+        <h1 class="brand__title">Duet</h1>
+      </div>
+
+      <div class="topbar__stats">
+        <span class="stat" id="moves"><strong>0</strong><small>moves</small></span>
+        <span class="stat" id="timer"><strong>0:00</strong><small>time</small></span>
+      </div>
+    </header>
+
+    <section class="board" id="board" aria-label="Memory card grid"></section>
+
+    <p class="hint" id="turn-hint">Player 1 — flip two cards</p>
+  </main>
+
+  <!-- Player 2 rail -->
+  <aside class="rail rail--p2" id="rail-p2" aria-label="Player 2">
+    <span class="rail__label">Player 2</span>
+    <span class="rail__score" id="score-p2">0</span>
+    <span class="rail__turn-dot" aria-hidden="true"></span>
+  </aside>
+
+</div>
+
+<!-- Setup overlay -->
+<div class="overlay" id="setup-overlay">
+  <div class="setup-card">
+    <div class="setup-mark">◆</div>
+    <h2>Duet</h2>
+    <p class="setup-sub">A memory game for two, on one screen.</p>
+
+    <div class="setup-field">
+      <label>Grid size</label>
+      <div class="segmented" id="grid-size" role="radiogroup">
+        <button data-size="4x3" class="active">4×3</button>
+        <button data-size="4x4">4×4</button>
+        <button data-size="6x4">6×4</button>
+      </div>
+    </div>
+
+    <div class="setup-field">
+      <label>Deck theme</label>
+      <div class="segmented" id="deck-theme" role="radiogroup">
+        <button data-theme="symbols" class="active">Symbols</button>
+        <button data-theme="animals">Animals</button>
+        <button data-theme="planets">Planets</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="btn-start">Start game</button>
+    <button class="btn-ghost" id="btn-install" hidden>Install app</button>
+  </div>
+</div>
+
+<!-- Winner overlay -->
+<div class="overlay" id="win-overlay" hidden>
+  <div class="setup-card win-card">
+    <div class="win-mark" id="win-mark">◆</div>
+    <h2 id="win-title">Player 1 wins!</h2>
+    <p class="setup-sub" id="win-sub">4 – 2 · 24 moves · 1:12</p>
+    <button class="btn-primary" id="btn-rematch">Rematch</button>
+    <button class="btn-ghost" id="btn-change-setup">Change setup</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
