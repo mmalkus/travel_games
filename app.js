@@ -3,7 +3,7 @@
 
   // Bump this on every shipped change — it's the only way to confirm
   // on-device (especially iOS, with no devtools) which build is loaded.
-  const APP_VERSION = '2026.07.23-10';
+  const APP_VERSION = '2026.07.23-11';
 
   const DECKS = {
     symbols: ['◆','●','▲','★','♥','✦','◈','✚','❖','⬟','⬢','✳','✶','✷','✸','✹','⬣','⬠','⬡','▣','◐','◑','◒','◓'],
@@ -301,29 +301,15 @@
   // requestFullscreen() unconditionally (the previous approach) risks
   // it rejecting/no-oping precisely because the app is already
   // borderless via display mode, with nothing left to "enter".
-  const lockStatusEl = document.getElementById('lock-status');
-  function reportLockStatus(text) {
-    if (lockStatusEl) lockStatusEl.textContent = 'orientation lock: ' + text;
-  }
-
   function lockOrientation() {
     lockOrientationCSS();
-    if (!(screen.orientation && screen.orientation.lock)) {
-      reportLockStatus('unsupported');
-      return;
-    }
-    screen.orientation.lock(screen.orientation.type)
-      .then(() => reportLockStatus('granted'))
-      .catch((err) => {
-        if (document.fullscreenElement || !document.documentElement.requestFullscreen) {
-          reportLockStatus('denied (' + (err && err.name) + ')');
-          return;
-        }
-        document.documentElement.requestFullscreen()
-          .then(() => screen.orientation.lock(screen.orientation.type))
-          .then(() => reportLockStatus('granted (via fullscreen)'))
-          .catch((err2) => reportLockStatus('denied (' + (err2 && err2.name) + ')'));
-      });
+    if (!(screen.orientation && screen.orientation.lock)) return;
+    screen.orientation.lock(screen.orientation.type).catch(() => {
+      if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+      document.documentElement.requestFullscreen()
+        .then(() => screen.orientation.lock(screen.orientation.type))
+        .catch(() => {});
+    });
   }
 
   // Lock immediately on load too, not just once a game starts — the
