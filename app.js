@@ -17,7 +17,6 @@
   };
 
   const boardEl = document.getElementById('board');
-  const hintEl = document.getElementById('turn-hint');
   const movesEl = document.getElementById('moves').querySelector('strong');
   const timerEl = document.getElementById('timer').querySelector('strong');
   const scoreEls = { 1: document.getElementById('score-p1'), 2: document.getElementById('score-p2') };
@@ -165,8 +164,6 @@
     railEls[2].classList.toggle('rail--active', p2Active);
     labelEls[1].textContent = p1Active ? 'Your turn' : 'Player 1';
     labelEls[2].textContent = p2Active ? 'Your turn' : 'Player 2';
-    hintEl.textContent = `Player ${state.current}'s turn`;
-    hintEl.classList.toggle('hint--flipped', p1Active);
   }
 
   function checkWin() {

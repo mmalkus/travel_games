@@ -236,17 +236,6 @@ button{font-family:inherit;}
   border:1px solid rgba(0,0,0,.05);
 }
 
-.hint{
-  margin-top:18px;
-  color:var(--muted);
-  font-size:.85rem;
-  min-height:1.2em;
-  transition:transform .3s ease;
-}
-/* Flips face-up for whichever player sits opposite, so the turn
-   prompt is only ever upside-down for the player it isn't for. */
-.hint--flipped{transform:rotate(180deg);}
-
 /* ---------- Overlays ---------- */
 .overlay{
   position:fixed; inset:0;
