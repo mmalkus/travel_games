@@ -165,7 +165,7 @@
     railEls[2].classList.toggle('rail--active', p2Active);
     labelEls[1].textContent = p1Active ? 'Your turn' : 'Player 1';
     labelEls[2].textContent = p2Active ? 'Your turn' : 'Player 2';
-    hintEl.textContent = `Player ${state.current} — flip two cards`;
+    hintEl.textContent = `Player ${state.current}'s turn`;
     hintEl.classList.toggle('hint--flipped', p1Active);
   }
 
@@ -198,11 +198,26 @@
   // ---- orientation lock ----
   // Chrome only allows screen.orientation.lock() while the page is
   // fullscreen (or running as an installed app), and Safari doesn't
-  // implement the lock at all — this is best-effort and silently no-ops
-  // wherever the platform doesn't support it. Locks to whichever
-  // orientation the device is already in when the game starts, since
-  // the layout works either way and only mid-game rotation is disruptive.
+  // implement the lock at all — so on top of that best-effort JS call,
+  // stageEl gets a CSS class recording whichever orientation the device
+  // is already in when the game starts. A media query in style.css
+  // rotates the stage back whenever the device's actual orientation
+  // later disagrees with that class, so the page stays visually fixed
+  // even where the JS lock silently does nothing.
+  const stageEl = document.getElementById('stage');
+
+  function lockOrientationCSS() {
+    const isPortrait = matchMedia('(orientation: portrait)').matches;
+    stageEl.classList.toggle('orient-lock--portrait', isPortrait);
+    stageEl.classList.toggle('orient-lock--landscape', !isPortrait);
+  }
+
+  function unlockOrientationCSS() {
+    stageEl.classList.remove('orient-lock--portrait', 'orient-lock--landscape');
+  }
+
   function lockOrientation() {
+    lockOrientationCSS();
     const lock = () => {
       if (screen.orientation && screen.orientation.lock) {
         screen.orientation.lock(screen.orientation.type).catch(() => {});
@@ -223,6 +238,7 @@
   });
   document.getElementById('btn-new').addEventListener('click', () => {
     stopTimer();
+    unlockOrientationCSS();
     setupOverlay.hidden = false;
     winOverlay.hidden = true;
   });
@@ -231,6 +247,7 @@
     startGame(state.sizeKey, state.themeKey);
   });
   document.getElementById('btn-change-setup').addEventListener('click', () => {
+    unlockOrientationCSS();
     winOverlay.hidden = true;
     setupOverlay.hidden = false;
   });
