@@ -1,4 +1,7 @@
-const CACHE_NAME = 'duet-memory-v5';
+// Bump this on every deploy that changes any cached asset — the browser
+// only re-fetches files once it sees this string (and thus this file's
+// own bytes) change, since the fetch handler below is cache-first.
+const CACHE_NAME = 'duet-memory-v6';
 const ASSETS = [
   './',
   './index.html',
